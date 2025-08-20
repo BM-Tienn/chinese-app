@@ -3,6 +3,9 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { sessionLimiter } = require('../middleware/rateLimit');
 
+// Verify user theo email
+router.post('/verify', userController.verifyUser);
+
 // Đăng nhập hoặc tạo user mới
 router.post('/login', sessionLimiter, userController.loginOrCreateUser);
 

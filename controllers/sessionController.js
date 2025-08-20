@@ -75,6 +75,13 @@ exports.getSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
 
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'SessionId là bắt buộc'
+            });
+        }
+
         const session = await Session.findOne({ sessionId });
 
         if (!session) {
@@ -106,9 +113,19 @@ exports.getSession = async (req, res) => {
         });
     } catch (error) {
         console.error('Lỗi khi lấy thông tin phiên:', error);
-        res.status(500).json({
+
+        // Xác định loại lỗi cụ thể
+        let statusCode = 500;
+        let errorMessage = 'Lỗi server khi lấy thông tin phiên';
+
+        if (error.name === 'CastError') {
+            statusCode = 400;
+            errorMessage = 'SessionId không hợp lệ';
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Lỗi server khi lấy thông tin phiên',
+            message: errorMessage,
             error: error.message
         });
     }
@@ -119,29 +136,15 @@ exports.updateSessionActivity = async (req, res) => {
     try {
         const { sessionId } = req.params;
 
-        const session = await Session.findOneAndUpdate(
-            { sessionId, isActive: true },
-            {
-                lastActivity: new Date(),
-                // Kiểm tra session có quá cũ không (24 giờ)
-                $set: {
-                    isActive: {
-                        $cond: {
-                            if: {
-                                $gte: [
-                                    { $subtract: [new Date(), '$startTime'] },
-                                    24 * 60 * 60 * 1000 // 24 giờ
-                                ]
-                            },
-                            then: false,
-                            else: true
-                        }
-                    }
-                }
-            },
-            { new: true }
-        );
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'SessionId là bắt buộc'
+            });
+        }
 
+        // Trước tiên, lấy session để kiểm tra thời gian
+        const session = await Session.findOne({ sessionId, isActive: true });
         if (!session) {
             return res.status(404).json({
                 success: false,
@@ -149,26 +152,61 @@ exports.updateSessionActivity = async (req, res) => {
             });
         }
 
+        // Kiểm tra session có quá cũ không (24 giờ)
+        const now = new Date();
+        const hoursDiff = (now - session.startTime) / (1000 * 60 * 60);
+        const shouldBeActive = hoursDiff < 24;
+
+        // Cập nhật session
+        const updatedSession = await Session.findOneAndUpdate(
+            { sessionId },
+            {
+                lastActivity: now,
+                isActive: shouldBeActive
+            },
+            { new: true }
+        );
+
+        if (!updatedSession) {
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể cập nhật session'
+            });
+        }
+
         res.json({
             success: true,
             message: 'Đã cập nhật hoạt động phiên thành công',
             data: {
-                sessionId: session.sessionId,
-                userId: session.userId,
-                startTime: session.startTime,
-                lastActivity: session.lastActivity,
-                isActive: session.isActive,
-                userAgent: session.userAgent,
-                ipAddress: session.ipAddress,
-                deviceInfo: session.deviceInfo,
-                metadata: session.metadata
+                sessionId: updatedSession.sessionId,
+                userId: updatedSession.userId,
+                startTime: updatedSession.startTime,
+                lastActivity: updatedSession.lastActivity,
+                isActive: updatedSession.isActive,
+                userAgent: updatedSession.userAgent,
+                ipAddress: updatedSession.ipAddress,
+                deviceInfo: updatedSession.deviceInfo,
+                metadata: updatedSession.metadata
             }
         });
     } catch (error) {
         console.error('Lỗi khi cập nhật hoạt động phiên:', error);
-        res.status(500).json({
+
+        // Xác định loại lỗi cụ thể
+        let statusCode = 500;
+        let errorMessage = 'Lỗi server khi cập nhật hoạt động phiên';
+
+        if (error.name === 'CastError') {
+            statusCode = 400;
+            errorMessage = 'Dữ liệu session không hợp lệ';
+        } else if (error.name === 'ValidationError') {
+            statusCode = 400;
+            errorMessage = 'Dữ liệu cập nhật không hợp lệ';
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Lỗi server khi cập nhật hoạt động phiên',
+            message: errorMessage,
             error: error.message
         });
     }
@@ -178,6 +216,13 @@ exports.updateSessionActivity = async (req, res) => {
 exports.endSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
+
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'SessionId là bắt buộc'
+            });
+        }
 
         const session = await Session.findOneAndUpdate(
             { sessionId },
@@ -199,9 +244,19 @@ exports.endSession = async (req, res) => {
         });
     } catch (error) {
         console.error('Lỗi khi kết thúc phiên:', error);
-        res.status(500).json({
+
+        // Xác định loại lỗi cụ thể
+        let statusCode = 500;
+        let errorMessage = 'Lỗi server khi kết thúc phiên';
+
+        if (error.name === 'CastError') {
+            statusCode = 400;
+            errorMessage = 'SessionId không hợp lệ';
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Lỗi server khi kết thúc phiên',
+            message: errorMessage,
             error: error.message
         });
     }
@@ -333,6 +388,13 @@ exports.deleteSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
 
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'SessionId là bắt buộc'
+            });
+        }
+
         const session = await Session.findOneAndDelete({ sessionId });
 
         if (!session) {
@@ -348,9 +410,19 @@ exports.deleteSession = async (req, res) => {
         });
     } catch (error) {
         console.error('Lỗi khi xóa phiên:', error);
-        res.status(500).json({
+
+        // Xác định loại lỗi cụ thể
+        let statusCode = 500;
+        let errorMessage = 'Lỗi server khi xóa phiên';
+
+        if (error.name === 'CastError') {
+            statusCode = 400;
+            errorMessage = 'SessionId không hợp lệ';
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Lỗi server khi xóa phiên',
+            message: errorMessage,
             error: error.message
         });
     }
@@ -361,9 +433,16 @@ exports.validateSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
 
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'SessionId là bắt buộc'
+            });
+        }
+
         const session = await Session.findOne(
             { sessionId, isActive: true },
-            { sessionId: 1, userId: 1, isActive: 1, lastActivity: 1 }
+            { sessionId: 1, userId: 1, isActive: 1, lastActivity: 1, startTime: 1 }
         );
 
         if (!session) {
@@ -377,10 +456,14 @@ exports.validateSession = async (req, res) => {
         const hoursDiff = (new Date() - session.startTime) / (1000 * 60 * 60);
         if (hoursDiff >= 24) {
             // Tự động set session thành inactive
-            await Session.findOneAndUpdate(
-                { sessionId },
-                { isActive: false }
-            );
+            try {
+                await Session.findOneAndUpdate(
+                    { sessionId },
+                    { isActive: false }
+                );
+            } catch (updateError) {
+                console.warn('Không thể cập nhật session thành inactive:', updateError);
+            }
 
             return res.status(410).json({
                 success: false,
@@ -399,9 +482,19 @@ exports.validateSession = async (req, res) => {
         });
     } catch (error) {
         console.error('Lỗi khi validate session:', error);
-        res.status(500).json({
+
+        // Xác định loại lỗi cụ thể
+        let statusCode = 500;
+        let errorMessage = 'Lỗi server khi validate session';
+
+        if (error.name === 'CastError') {
+            statusCode = 400;
+            errorMessage = 'SessionId không hợp lệ';
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Lỗi server khi validate session',
+            message: errorMessage,
             error: error.message
         });
     }

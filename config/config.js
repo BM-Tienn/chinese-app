@@ -4,7 +4,7 @@ module.exports = {
   port: process.env.PORT || 3001,
   mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/chinese_ai_db',
   nodeEnv: process.env.NODE_ENV || 'development',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3789',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiApiBaseUrl: process.env.GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent',
   geminiApiTimeout: parseInt(process.env.GEMINI_API_TIMEOUT || '120000'), // Tăng từ 30s lên 120s

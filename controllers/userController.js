@@ -39,11 +39,15 @@ exports.loginOrCreateUser = async (req, res) => {
             },
             metadata: {
                 loginMethod: 'email',
-                userEmail: user.email
+                userEmail: user.email,
+                loginTime: new Date().toISOString()
             }
         });
 
         await session.save();
+
+        // Log thông tin đăng nhập
+        console.log(`User ${user.email} đã đăng nhập thành công, sessionId: ${sessionId}`);
 
         res.json({
             success: true,
@@ -230,6 +234,67 @@ exports.getUserStats = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Lỗi server khi lấy thống kê user',
+            error: error.message
+        });
+    }
+};
+
+// Verify user theo email
+exports.verifyUser = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email là bắt buộc'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email không hợp lệ'
+            });
+        }
+
+        // Tìm user theo email
+        const user = await User.findOne({ email });
+
+        if (user) {
+            // User đã tồn tại
+            res.json({
+                success: true,
+                message: 'User đã tồn tại',
+                data: {
+                    exists: true,
+                    user: {
+                        id: user._id,
+                        email: user.email,
+                        displayName: user.displayName,
+                        lastLogin: user.lastLogin,
+                        loginCount: user.loginCount
+                    }
+                }
+            });
+        } else {
+            // User chưa tồn tại
+            res.json({
+                success: true,
+                message: 'User chưa tồn tại',
+                data: {
+                    exists: false,
+                    email: email
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Lỗi khi verify user:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi verify user',
             error: error.message
         });
     }
