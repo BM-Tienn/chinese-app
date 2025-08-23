@@ -6,7 +6,7 @@ module.exports = {
         name: "chinese-ai-backend",
         script: "./server.js",
         exec_mode: "cluster",
-        instances: 2,
+        instances: 1,
         autorestart: true,
         watch: false,
         max_memory_restart: "1G",
