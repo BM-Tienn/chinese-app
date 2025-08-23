@@ -94,11 +94,14 @@ app.use((error, req, res, next) => {
 
 // Khởi động server
 const PORT = config.port;
-app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy trên port ${PORT}`);
+const HOST = config.nodeEnv === 'production' ? '127.0.0.1' : '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server đang chạy trên ${HOST}:${PORT}`);
   console.log(`📊 Môi trường: ${config.nodeEnv}`);
   console.log(`🔗 MongoDB: ${config.mongodbUri}`);
   console.log(`🌐 CORS Origin: ${config.corsOrigin}`);
+  console.log(`🔒 Production mode: ${HOST === '127.0.0.1' ? 'Internal binding (safe)' : 'All interfaces'}`);
 });
 
 // Xử lý graceful shutdown
