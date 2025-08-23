@@ -1,19 +1,22 @@
+// Load environment variables
+require('dotenv').config();
+
 module.exports = {
     apps: [{
         name: "chinese-ai-backend",
         script: "./server.js",
         exec_mode: "cluster",
-        instances: 1,                 // Có thể tăng lên 'max' để dùng hết CPU cores
+        instances: 2,
         autorestart: true,
-        watch: false,                 // Production tắt watch
-        max_memory_restart: "500M",   // Restart nếu vượt quá 500MB RAM
+        watch: false,
+        max_memory_restart: "1G",
         env: {
             NODE_ENV: "development",
-            PORT: 3001
+            PORT: process.env.PORT || 3001
         },
         env_production: {
             NODE_ENV: "production",
-            PORT: 3001                  // KHỚP với CloudPanel Application Port
+            PORT: process.env.PORT || 3001
         },
         // Logging
         log_file: "./logs/combined.log",
