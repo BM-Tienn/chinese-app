@@ -16,6 +16,10 @@ const vocabularyRoutes = require('./routes/vocabularyRoutes');
 // Khởi tạo app
 const app = express();
 
+// SỬA LỖI: Bật 'trust proxy' để express-rate-limit hoạt động đúng sau Traefik
+// Số 1 có nghĩa là tin tưởng vào 1 lớp proxy đứng trước (chính là Traefik)
+app.set('trust proxy', 1);
+
 // Kết nối MongoDB
 connectDB();
 
@@ -94,14 +98,14 @@ app.use((error, req, res, next) => {
 
 // Khởi động server
 const PORT = config.port;
-const HOST = config.nodeEnv === 'production' ? '127.0.0.1' : '0.0.0.0';
+const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Server đang chạy trên ${HOST}:${PORT}`);
   console.log(`📊 Môi trường: ${config.nodeEnv}`);
   console.log(`🔗 MongoDB: ${config.mongodbUri}`);
   console.log(`🌐 CORS Origin: ${config.corsOrigin}`);
-  console.log(`🔒 Production mode: ${HOST === '127.0.0.1' ? 'Internal binding (safe)' : 'All interfaces'}`);
+  console.log(`🔒 Server is listening on all network interfaces.`);
 });
 
 // Xử lý graceful shutdown
