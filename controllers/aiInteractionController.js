@@ -1,5 +1,6 @@
 const AIInteraction = require('../models/AIInteraction');
 const aiService = require('../services/aiService');
+const dataPreviewService = require('../services/dataPreviewService');
 
 // Lưu tương tác AI mới
 exports.saveAIInteraction = async (req, res) => {
@@ -421,7 +422,8 @@ exports.getInteractionHistory = async (req, res) => {
       dateFrom,
       dateTo,
       limit = 50,
-      skip = 0
+      skip = 0,
+      page = 1
     } = req.query;
 
     const filters = {};
@@ -434,7 +436,82 @@ exports.getInteractionHistory = async (req, res) => {
 
     const result = await aiService.getAIInteractionHistory(filters, parseInt(limit), parseInt(skip));
 
-    res.json(result);
+    // Cải thiện cấu trúc response để frontend dễ xử lý
+    const enhancedItems = result.data.map(item => {
+      // Debug logging để kiểm tra dữ liệu
+      console.log('Processing item:', {
+        _id: item._id,
+        hasId: !!item._id,
+        sessionId: item.sessionId,
+        endpoint: item.endpoint
+      });
+
+      // Validation để đảm bảo có _id
+      if (!item._id) {
+        console.error('Item missing _id:', item);
+        return null; // Skip items without _id
+      }
+
+      // Đảm bảo cả id và _id đều có giá trị
+      const itemId = item._id.toString();
+
+      return {
+        id: itemId, // Convert ObjectId to string
+        _id: itemId, // Giữ nguyên _id để tương thích
+        sessionId: item.sessionId,
+        userId: item.userId,
+        endpoint: item.endpoint,
+        aiModel: item.aiModel,
+        requestPayload: item.requestPayload,
+        responseData: item.responseData,
+        requestTimestamp: item.requestTimestamp,
+        responseTimestamp: item.responseTimestamp,
+        responseTime: item.responseTime,
+        status: item.status,
+        errorMessage: item.errorMessage,
+        tags: item.tags || [],
+        notes: item.notes,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        // Thêm các trường tính toán
+        processingTime: item.processingTime,
+        // Thêm metadata hữu ích
+        metadata: {
+          hasLargeData: !!(item.requestPayloadBuffer || item.responseDataBuffer),
+          dataSize: {
+            request: item.requestPayload ? JSON.stringify(item.requestPayload).length : 0,
+            response: item.responseData ? JSON.stringify(item.responseData).length : 0
+          }
+        }
+      };
+    }).filter(Boolean); // Remove null items
+
+    // Thêm header để tránh caching
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    res.json({
+      success: true,
+      data: enhancedItems,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: result.total || 0,
+        totalPages: Math.ceil((result.total || 0) / parseInt(limit)),
+        hasNext: (parseInt(page) * parseInt(limit)) < (result.total || 0),
+        hasPrev: parseInt(page) > 1
+      },
+      filters: {
+        applied: filters,
+        available: {
+          endpoints: ['analyzeImage', 'generateExercises', 'analyzeWordDetails', 'analyzePronunciation'],
+          statuses: ['pending', 'success', 'error', 'timeout']
+        }
+      }
+    });
   } catch (error) {
     console.error('Lỗi khi lấy lịch sử AI interactions:', error);
     res.status(500).json({
@@ -467,7 +544,66 @@ exports.getInteractionStats = async (req, res) => {
 
     const result = await aiService.getAIInteractionStats(filters);
 
-    res.json(result);
+    // Cải thiện cấu trúc response để frontend dễ xử lý
+    const enhancedStats = {
+      overview: {
+        totalInteractions: result.totalInteractions || 0,
+        totalSuccess: result.totalSuccess || 0,
+        totalErrors: result.totalErrors || 0,
+        avgResponseTime: result.avgResponseTime || 0,
+        successRate: result.totalInteractions > 0 ?
+          Math.round((result.totalSuccess / result.totalInteractions) * 100) : 0,
+        errorRate: result.totalInteractions > 0 ?
+          Math.round((result.totalErrors / result.totalInteractions) * 100) : 0
+      },
+
+      performance: {
+        avgResponseTime: result.avgResponseTime || 0,
+        fastestResponse: result.fastestResponse || 0,
+        slowestResponse: result.slowestResponse || 0,
+        responseTimeDistribution: {
+          fast: result.responseTimeDistribution?.fast || 0,      // < 1s
+          normal: result.responseTimeDistribution?.normal || 0,  // 1-5s
+          slow: result.responseTimeDistribution?.slow || 0       // > 5s
+        }
+      },
+
+      byEndpoint: result.byEndpoint || [],
+      byStatus: result.byStatus || [],
+      byTime: result.byTime || [],
+
+      // Thống kê theo nội dung
+      contentAnalysis: {
+        totalVocabularyGenerated: result.contentStats?.vocabulary || 0,
+        totalExercisesGenerated: result.contentStats?.exercises || 0,
+        totalWordsAnalyzed: result.contentStats?.words || 0,
+        totalPronunciationAnalyzed: result.contentStats?.pronunciation || 0
+      },
+
+      // Thống kê theo thời gian
+      timeAnalysis: {
+        peakHours: result.timeAnalysis?.peakHours || [],
+        dailyTrends: result.timeAnalysis?.dailyTrends || [],
+        weeklyPatterns: result.timeAnalysis?.weeklyPatterns || []
+      },
+
+      // Metadata
+      filters: {
+        applied: filters,
+        dateRange: {
+          from: dateFrom,
+          to: dateTo
+        }
+      },
+
+      lastUpdated: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      data: enhancedStats,
+      message: 'Lấy thống kê AI interactions thành công'
+    });
   } catch (error) {
     console.error('Lỗi khi lấy thống kê AI interactions:', error);
     res.status(500).json({
@@ -528,15 +664,89 @@ exports.getFullAIInteraction = async (req, res) => {
     }
 
     // Sử dụng method mới để lấy dữ liệu đầy đủ
-    const fullData = {
+    const fullRequestPayload = interaction.getFullRequestPayload();
+    const fullResponseData = interaction.getFullResponseData();
+
+    // Debug logging để kiểm tra dữ liệu
+    console.log('Full response data:', {
+      hasData: !!fullResponseData,
+      type: typeof fullResponseData,
+      keys: fullResponseData ? Object.keys(fullResponseData) : [],
+      parsedResult: fullResponseData?.parsedResult,
+      hasParsedResult: !!fullResponseData?.parsedResult
+    });
+
+    // Tạo preview dữ liệu thân thiện với người dùng
+    const previewData = dataPreviewService.formatAIInteractionPreview({
       ...interaction.toObject(),
-      fullRequestPayload: interaction.getFullRequestPayload(),
-      fullResponseData: interaction.getFullResponseData()
+      requestPayload: fullRequestPayload,
+      responseData: fullResponseData
+    });
+
+    console.log('Generated preview data:', {
+      hasPreview: !!previewData,
+      previewType: previewData?.type,
+      sections: previewData?.sections?.length || 0
+    });
+
+    // Cải thiện cấu trúc response để frontend dễ xử lý
+    const fullData = {
+      id: interaction._id,
+      sessionId: interaction.sessionId,
+      userId: interaction.userId,
+      endpoint: interaction.endpoint,
+      aiModel: interaction.aiModel,
+
+      // Preview dữ liệu thân thiện với người dùng
+      preview: previewData,
+
+      // Dữ liệu request chi tiết (raw data)
+      request: {
+        payload: fullRequestPayload,
+        timestamp: interaction.requestTimestamp,
+        metadata: {
+          hasLargeData: !!interaction.requestPayloadBuffer,
+          dataSize: interaction.requestPayloadBuffer ?
+            interaction.requestPayloadBuffer.length :
+            (fullRequestPayload ? JSON.stringify(fullRequestPayload).length : 0),
+          contentType: this.getContentType(fullRequestPayload)
+        }
+      },
+
+      // Dữ liệu response chi tiết (raw data)
+      response: {
+        data: fullResponseData,
+        timestamp: interaction.responseTimestamp,
+        responseTime: interaction.responseTime,
+        status: interaction.status,
+        errorMessage: interaction.errorMessage,
+        metadata: {
+          hasLargeData: !!interaction.responseDataBuffer,
+          dataSize: interaction.responseDataBuffer ?
+            interaction.responseDataBuffer.length :
+            (fullResponseData ? JSON.stringify(fullResponseData).length : 0),
+          contentType: this.getContentType(fullResponseData)
+        }
+      },
+
+      // Metadata bổ sung
+      tags: interaction.tags || [],
+      notes: interaction.notes,
+      createdAt: interaction.createdAt,
+      updatedAt: interaction.updatedAt,
+
+      // Thông tin xử lý
+      processing: {
+        processingTime: interaction.processingTime,
+        efficiency: interaction.responseTime > 0 ?
+          Math.round((interaction.responseTime / 1000) * 100) / 100 : 0
+      }
     };
 
     res.json({
       success: true,
-      data: fullData
+      data: fullData,
+      message: 'Lấy dữ liệu AI interaction đầy đủ thành công'
     });
   } catch (error) {
     console.error('Lỗi khi lấy dữ liệu AI interaction đầy đủ:', error);
@@ -546,6 +756,37 @@ exports.getFullAIInteraction = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Helper method để xác định loại nội dung
+exports.getContentType = (data) => {
+  if (!data) return 'unknown';
+
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return this.getContentType(parsed);
+    } catch {
+      return 'text';
+    }
+  }
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) return 'empty_array';
+    if (data[0] && data[0].hanzi) return 'vocabulary_list';
+    if (data[0] && data[0].question) return 'exercise_list';
+    return 'array';
+  }
+
+  if (typeof data === 'object') {
+    if (data.vocabulary) return 'image_analysis';
+    if (data.exercises) return 'exercise_generation';
+    if (data.word) return 'word_analysis';
+    if (data.pronunciation) return 'pronunciation_analysis';
+    return 'object';
+  }
+
+  return typeof data;
 };
 
 // Xóa tương tác AI

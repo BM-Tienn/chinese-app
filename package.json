@@ -1,22 +1,16 @@
 {
   "name": "chinese-ai-backend",
   "version": "1.0.0",
-  "description": "Backend quản lý dữ liệu kết nối giữa frontend và AI",
+  "description": "Quản lý học tiếng Trung",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node --no-deprecation server.js",
+    "dev": "nodemon --no-deprecation server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed": "node scripts/seedVocabularies.js",
-    "pm2:start": "pm2 start ecosystem.config.js --env production",
-    "pm2:stop": "pm2 stop chinese-ai-backend",
-    "pm2:restart": "pm2 restart chinese-ai-backend",
-    "pm2:reload": "pm2 reload chinese-ai-backend",
-    "pm2:logs": "pm2 logs chinese-ai-backend",
-    "pm2:status": "pm2 status",
-    "pm2:delete": "pm2 delete chinese-ai-backend",
-    "pm2:save": "pm2 save",
-    "pm2:startup": "pm2 startup systemd"
+    "seed": "node --no-deprecation scripts/seedVocabularies.js"
   },
   "keywords": [
     "chinese",

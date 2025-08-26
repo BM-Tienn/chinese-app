@@ -12,6 +12,9 @@ const frontendActivityRoutes = require('./routes/frontendActivityRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const userRoutes = require('./routes/userRoutes');
 const vocabularyRoutes = require('./routes/vocabularyRoutes');
+const personalVocabularyRoutes = require('./routes/personalVocabularyRoutes');
+const userProgressRoutes = require('./routes/userProgressRoutes');
+const autoTaskRoutes = require('./routes/autoTaskRoutes');
 
 // Khởi tạo app
 const app = express();
@@ -49,6 +52,9 @@ app.use('/api/frontend-activities', frontendActivityRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vocabularies', vocabularyRoutes);
+app.use('/api/personal-vocabulary', personalVocabularyRoutes);
+app.use('/api/user-progress', userProgressRoutes);
+app.use('/api/auto-task', autoTaskRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -72,6 +78,9 @@ app.get('/', (req, res) => {
       sessions: '/api/sessions',
       users: '/api/users',
       vocabularies: '/api/vocabularies',
+      personalVocabulary: '/api/personal-vocabulary',
+      userProgress: '/api/user-progress',
+      autoTask: '/api/auto-task',
       health: '/health'
     }
   });

@@ -110,6 +110,30 @@ vocabularySchema.index({ "meaning.primary": 1 }); // Có thể tìm kiếm theo 
 vocabularySchema.index({ hskLevel: 1 });
 vocabularySchema.index({ category: 1 });
 
+// Static method để lấy thống kê
+vocabularySchema.statics.getStats = function (filters = {}) {
+  const matchStage = { isActive: true };
+
+  if (filters.category) matchStage.category = filters.category;
+  if (filters.difficulty) matchStage.difficulty = filters.difficulty;
+  if (filters.hskLevel) matchStage.hskLevel = filters.hskLevel;
+  if (filters.source) matchStage['metadata.source'] = filters.source;
+
+  return this.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: null,
+        totalWords: { $sum: 1 },
+        byCategory: { $push: '$category' },
+        byDifficulty: { $push: '$difficulty' },
+        byHskLevel: { $push: '$hskLevel' },
+        bySource: { $push: '$metadata.source' }
+      }
+    }
+  ]);
+};
+
 const Vocabulary = mongoose.model('Vocabulary', vocabularySchema);
 
 module.exports = Vocabulary;

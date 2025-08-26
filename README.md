@@ -1,363 +1,353 @@
-# Chinese AI Backend
+# Backend API - Hán Ngữ Trợ Thủ (Chinese AI Learning Assistant)
 
-Backend quản lý dữ liệu kết nối giữa frontend và AI, tích hợp với Gemini API và MongoDB.
+## 🎯 Tổng Quan
 
-## Tính năng chính
+Backend API cho ứng dụng "Hán Ngữ Trợ Thủ" - một nền tảng học tiếng Trung thông minh tích hợp AI, cung cấp các tính năng:
 
-### 🔐 User & Session Management
+- **AI-Powered Learning**: Phân tích hình ảnh, tạo bài tập, phân tích từ vựng với Gemini AI
+- **Personalized Learning**: Quản lý từ vựng cá nhân, theo dõi tiến độ học tập
+- **Smart Content Generation**: Tự động tạo nội dung học tập từ AI
+- **Progress Tracking**: Hệ thống theo dõi tiến độ, achievements và spaced repetition
+- **Session Management**: Quản lý phiên làm việc và hoạt động người dùng
 
-- Hệ thống đăng nhập với email (không cần mật khẩu)
-- Tự động tạo user mới hoặc khôi phục user cũ
-- Quản lý phiên người dùng với thông tin chi tiết
-- Theo dõi hoạt động và thời gian sử dụng
-- Lưu trữ thông tin thiết bị và user agent
+## 🏗️ Kiến Trúc Hệ Thống
 
-### 🤖 AI Integration
+### Core Components
 
-- Tích hợp với Gemini AI API
-- Phân tích hình ảnh tiếng Trung
-- Tạo bài tập tự động
-- Phân tích từ vựng chi tiết
-- Phân tích phát âm
+```
+backend/
+├── 📁 config/          # Cấu hình ứng dụng
+├── 📁 controllers/     # Xử lý logic nghiệp vụ
+├── 📁 middleware/      # Middleware xác thực, validation
+├── 📁 models/          # Schema MongoDB và business logic
+├── 📁 routes/          # Định tuyến API endpoints
+├── 📁 services/        # Business logic và tích hợp AI
+├── 📁 scripts/         # Scripts seeding và maintenance
+└── 📄 server.js        # Entry point chính
+```
 
-### 📊 Activity Tracking
+### Technology Stack
 
-- Theo dõi hoạt động frontend
-- Lưu trữ tương tác AI
-- Thống kê sử dụng và hiệu suất
+- **Runtime**: Node.js 18.18.0+
+- **Framework**: Express.js 4.18+
+- **Database**: MongoDB với Mongoose ODM
+- **AI Integration**: Google Gemini 2.5 Flash API
+- **Authentication**: Session-based với UUID
+- **Security**: Helmet, CORS, Rate Limiting
+- **Logging**: Morgan + Winston
+- **Validation**: Express-validator
 
-### 🛡️ Security & Performance
+## 🚀 Cài Đặt & Chạy
 
-- Rate limiting cho API
-- CORS configuration
-- Helmet security headers
-- Morgan logging
+### Yêu Cầu Hệ Thống
 
-## Cài đặt
+- Node.js >= 18.18.0
+- MongoDB >= 5.0
+- RAM: >= 2GB
+- Storage: >= 1GB
 
-### 1. Cài đặt dependencies
+### Cài Đặt
 
 ```bash
+# Clone repository
+git clone <repository-url>
+cd backend
+
+# Cài đặt dependencies
 npm install
-```
 
-### 2. Cấu hình môi trường
+# Tạo file .env từ template
+cp .env.example .env
 
-**⚠️ QUAN TRỌNG: Bạn PHẢI cấu hình GEMINI_API_KEY để sử dụng AI features!**
+# Cấu hình biến môi trường
+# Xem phần Environment Variables bên dưới
 
-Tạo file `.env` trong thư mục `backend/`:
-
-```env
-# Backend Configuration
-PORT=3001
-MONGODB_URI=mongodb://localhost:27017/chinese_ai_db
-NODE_ENV=development
-CORS_ORIGIN=http://localhost:5173
-
-# Gemini AI Configuration
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent
-
-# Performance Optimization
-GEMINI_API_TIMEOUT=120000
-GEMINI_MAX_OUTPUT_TOKENS=16384
-GEMINI_TEMPERATURE=0.3
-GEMINI_TOP_P=0.9
-
-# Advanced Performance Features
-ENABLE_STREAMING=true
-ENABLE_CACHING=true
-MAX_CONCURRENT_REQUESTS=5
-REQUEST_RETRY_COUNT=2
-```
-
-#### 🔑 Lấy GEMINI_API_KEY:
-
-1. Truy cập: https://makersuite.google.com/app/apikey
-2. Đăng nhập bằng Google account
-3. Click "Create API Key"
-4. Copy API key và paste vào file `.env`
-
-**📖 Xem hướng dẫn chi tiết:** [SETUP_API_KEY.md](./SETUP_API_KEY.md)
-
-### 3. Khởi động MongoDB
-
-```bash
-# Windows
-mongod
-
-# macOS/Linux
-sudo systemctl start mongod
-```
-
-### 4. Chạy ứng dụng
-
-```bash
-# Development mode
-npm run dev
-
-# Production mode
-npm start
-```
-
-## API Endpoints
-
-### Users
-
-```
-POST   /api/users/login                 # Đăng nhập hoặc tạo user mới
-GET    /api/users/session/:sessionId    # Lấy thông tin user theo session
-PATCH  /api/users/session/:sessionId    # Cập nhật thông tin user
-GET    /api/users/stats                 # Thống kê user
-```
-
-### Sessions
-
-```
-POST   /api/sessions                    # Tạo phiên mới
-GET    /api/sessions/:sessionId         # Lấy thông tin phiên
-PATCH  /api/sessions/:sessionId/activity # Cập nhật hoạt động
-PATCH  /api/sessions/:sessionId/end     # Kết thúc phiên
-GET    /api/sessions                    # Danh sách phiên
-GET    /api/sessions/stats              # Thống kê phiên
-DELETE /api/sessions/:sessionId         # Xóa phiên
-```
-
-### AI Interactions
-
-```
-POST   /api/ai-interactions                    # Lưu tương tác AI
-POST   /api/ai-interactions/analyze-image     # Phân tích hình ảnh
-POST   /api/ai-interactions/generate-exercises # Tạo bài tập
-POST   /api/ai-interactions/analyze-word-details # Phân tích từ vựng
-POST   /api/ai-interactions/analyze-pronunciation # Phân tích phát âm
-GET    /api/ai-interactions/session/:sessionId # Tương tác theo phiên
-GET    /api/ai-interactions/stats              # Thống kê tương tác
-DELETE /api/ai-interactions/:id                # Xóa tương tác
-```
-
-### Frontend Activities
-
-```
-POST   /api/frontend-activities                    # Lưu hoạt động
-GET    /api/frontend-activities/session/:sessionId # Hoạt động theo phiên
-GET    /api/frontend-activities/stats              # Thống kê hoạt động
-GET    /api/frontend-activities/recent             # Hoạt động gần đây
-DELETE /api/frontend-activities/:id                # Xóa hoạt động
-```
-
-## Tích hợp với Frontend
-
-### 1. Sử dụng backendService
-
-```typescript
-import {
-  backendUtils,
-  aiService,
-  userService,
-} from "../services/backendService";
-
-// Đăng nhập user
-const userData = await userService.loginOrCreateUser({
-  email: "user@example.com",
-  displayName: "Tên người dùng",
-});
-
-// Khởi tạo session (anonymous - giữ lại để tương thích)
-const session = await backendUtils.initializeSession("/home", "HomePage");
-
-// Phân tích hình ảnh
-const result = await aiService.analyzeImage({
-  sessionId: session.sessionId,
-  payload: imagePayload,
-  metadata: { source: "image_upload" },
-});
-
-// Lưu hoạt động
-await backendUtils.trackActivity(
-  session.sessionId,
-  "button_click",
-  "/home",
-  "ImageUploadButton",
-  { action: "upload_image" }
-);
-```
-
-### 2. Sử dụng apiService (tương thích ngược)
-
-```typescript
-import { analyzeImage, backendUtils } from "../services/apiService";
-
-// Khởi tạo session
-const session = await backendUtils.initializeSession("/home");
-
-// Phân tích hình ảnh (tự động tạo session nếu cần)
-const result = await analyzeImage(imagePayload, session.sessionId);
-```
-
-## Cấu trúc dữ liệu
-
-### Session
-
-```json
-{
-  "sessionId": "uuid",
-  "userId": "anonymous",
-  "startTime": "2024-01-01T00:00:00.000Z",
-  "lastActivity": "2024-01-01T01:00:00.000Z",
-  "isActive": true,
-  "userAgent": "Mozilla/5.0...",
-  "deviceInfo": {
-    "platform": "Win32",
-    "language": "vi-VN"
-  }
-}
-```
-
-### AI Interaction
-
-```json
-{
-  "sessionId": "uuid",
-  "userId": "anonymous",
-  "userInput": "JSON string của payload",
-  "aiResponse": "JSON string của kết quả",
-  "aiModel": "gemini-2.5-flash-preview-05-20",
-  "responseTime": 1500,
-  "status": "success",
-  "metadata": {
-    "type": "image_analysis",
-    "source": "frontend"
-  }
-}
-```
-
-### Frontend Activity
-
-```json
-{
-  "sessionId": "uuid",
-  "userId": "anonymous",
-  "action": "button_click",
-  "page": "/home",
-  "component": "ImageUploadButton",
-  "details": {
-    "action": "upload_image"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-## Monitoring và Analytics
-
-### Health Check
-
-```
-GET /health
-```
-
-### Thống kê tổng quan
-
-```
-GET /api/ai-interactions/stats
-GET /api/frontend-activities/stats
-GET /api/sessions/stats
-```
-
-## Xử lý lỗi
-
-Backend tự động lưu các lỗi AI vào database với:
-
-- `status: "error"`
-- `aiResponse`: thông báo lỗi
-- `metadata.type`: loại tương tác
-- `metadata.error`: chi tiết lỗi
-
-## Best Practices
-
-### 1. Luôn khởi tạo session trước khi sử dụng AI
-
-```typescript
-const session = await backendUtils.initializeSession(currentPage);
-```
-
-### 2. Theo dõi tất cả hoạt động quan trọng
-
-```typescript
-await backendUtils.trackActivity(
-  sessionId,
-  "form_submit",
-  page,
-  component,
-  formData
-);
-```
-
-### 3. Xử lý lỗi gracefully
-
-```typescript
-try {
-  const result = await aiService.analyzeImage({ sessionId, payload });
-  return result.data.result;
-} catch (error) {
-  console.error("AI analysis failed:", error);
-  // Fallback hoặc retry logic
-}
-```
-
-## Troubleshooting
-
-### Lỗi kết nối MongoDB
-
-- Kiểm tra MongoDB có đang chạy không
-- Kiểm tra connection string trong `.env`
-
-### Lỗi Gemini API
-
-- Kiểm tra API key có hợp lệ không
-- Kiểm tra quota và rate limits
-
-### Lỗi CORS
-
-- Kiểm tra `CORS_ORIGIN` trong `.env`
-- Đảm bảo frontend URL đúng
-
-## Development
-
-### Chạy với nodemon
-
-```bash
-npm run dev
-```
-
-### Logs
-
-- Morgan HTTP request logging
-- Console logging cho errors
-- MongoDB connection status
-
-### Testing
-
-```bash
-npm test
-```
-
-## Deployment
-
-### Production
-
-```bash
-NODE_ENV=production npm start
+# Chạy ứng dụng
+npm run dev      # Development mode
+npm start        # Production mode
 ```
 
 ### Environment Variables
 
-- `PORT`: Port server (default: 3001)
-- `MONGODB_URI`: MongoDB connection string
-- `NODE_ENV`: Environment (development/production)
-- `CORS_ORIGIN`: Allowed frontend origin
-- `GEMINI_API_KEY`: Gemini AI API key
+```bash
+# Server Configuration
+PORT=3001
+NODE_ENV=development
 
-## License
+# Database
+MONGODB_URI=mongodb://localhost:27017/chinese_ai_db
 
-MIT
+# AI Service (Gemini)
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent
+GEMINI_API_TIMEOUT=120000
+GEMINI_MAX_OUTPUT_TOKENS=16384
+
+# CORS & Security
+CORS_ORIGIN=http://localhost:3789
+
+# Performance
+MAX_CONCURRENT_REQUESTS=5
+REQUEST_RETRY_COUNT=2
+```
+
+## 📚 API Endpoints
+
+### 1. AI Interactions (`/api/ai-interactions`)
+
+**Core AI functionality cho học tập**
+
+- `POST /analyze-image` - Phân tích hình ảnh, trích xuất từ vựng
+- `POST /generate-exercises` - Tạo bài tập tự động
+- `POST /analyze-word-details` - Phân tích chi tiết từ vựng
+- `POST /analyze-pronunciation` - Phân tích phát âm
+- `GET /history` - Lịch sử tương tác AI
+- `GET /stats` - Thống kê AI interactions
+
+### 2. Personal Vocabulary (`/api/personal-vocabulary`)
+
+**Quản lý từ vựng cá nhân của người dùng**
+
+- `GET /` - Danh sách từ vựng cá nhân
+- `POST /` - Thêm từ vựng mới
+- `PUT /:id` - Cập nhật từ vựng
+- `DELETE /:id` - Xóa từ vựng
+- `GET /review/words` - Từ vựng cần ôn tập
+- `GET /new/words` - Từ vựng mới để học
+- `PUT /:id/study-result` - Cập nhật kết quả học tập
+- `GET /stats` - Thống kê từ vựng cá nhân
+
+### 3. User Progress (`/api/user-progress`)
+
+**Theo dõi tiến độ học tập và achievements**
+
+- `GET /` - Tiến độ tổng quan
+- `PUT /` - Cập nhật tiến độ
+- `POST /experience` - Thêm XP
+- `POST /streak` - Cập nhật streak học tập
+- `GET /weekly` - Tiến độ theo tuần
+- `GET /daily` - Tiến độ theo ngày
+- `GET /achievements` - Danh sách achievements
+- `GET /overall-stats` - Thống kê tổng quan
+
+### 4. Vocabulary Management (`/api/vocabularies`)
+
+**Quản lý kho từ vựng chung (từ điển toàn cầu)**
+
+- `GET /` - Danh sách từ vựng với phân trang
+- `GET /:id` - Chi tiết từ vựng
+- `POST /` - Tạo từ vựng mới
+- `PUT /:id` - Cập nhật từ vựng
+- `DELETE /:id` - Xóa từ vựng (soft delete)
+- `GET /search` - Tìm kiếm nâng cao
+- `GET /hsk/:level` - Từ vựng theo cấp độ HSK
+- `GET /random` - Từ vựng ngẫu nhiên cho bài tập
+- `GET /stats` - Thống kê kho từ vựng
+
+### 5. Session Management (`/api/sessions`)
+
+**Quản lý phiên làm việc và xác thực**
+
+- `POST /` - Tạo phiên mới
+- `GET /:sessionId` - Thông tin phiên
+- `PUT /:sessionId/activity` - Cập nhật hoạt động
+- `DELETE /:sessionId` - Kết thúc phiên
+- `GET /` - Danh sách phiên
+- `GET /stats` - Thống kê phiên
+- `GET /:sessionId/validate` - Validate session nhanh
+
+### 6. User Management (`/api/users`)
+
+**Quản lý người dùng và đăng nhập**
+
+- `POST /login` - Đăng nhập hoặc tạo user mới
+- `GET /session/:sessionId` - Lấy thông tin user theo session
+- `PUT /session/:sessionId` - Cập nhật thông tin user
+- `GET /stats` - Thống kê người dùng
+- `POST /verify` - Verify user theo email
+
+### 7. Auto Task System (`/api/auto-task`)
+
+**Hệ thống task tự động xử lý dữ liệu AI**
+
+- `GET /status` - Trạng thái tổng quan
+- `GET /history` - Lịch sử task tự động
+- `GET /analytics` - Thống kê chi tiết
+- `POST /rerun/:sessionId/:endpoint` - Chạy lại task
+- `DELETE /cleanup/:sessionId/:endpoint` - Dọn dẹp dữ liệu
+
+### 8. Frontend Activity Tracking (`/api/frontend-activities`)
+
+**Theo dõi hoạt động người dùng trên frontend**
+
+- `POST /` - Lưu hoạt động mới
+- `GET /session/:sessionId` - Hoạt động theo session
+- `GET /stats` - Thống kê hoạt động
+- `GET /recent` - Hoạt động gần đây
+
+## 🧠 AI Integration
+
+### Gemini AI Features
+
+- **Image Analysis**: Phân tích hình ảnh, trích xuất từ vựng tiếng Trung
+- **Exercise Generation**: Tạo bài tập trắc nghiệm, điền từ, ngữ pháp
+- **Word Analysis**: Phân tích chi tiết từ vựng, radicals, stroke count
+- **Pronunciation Analysis**: Phân tích và hướng dẫn phát âm
+
+### AI Response Processing
+
+- **Content Type Detection**: Tự động phát hiện loại nội dung
+- **Large Data Handling**: Sử dụng Buffer cho dữ liệu >16MB
+- **Response Validation**: Kiểm tra và parse JSON response
+- **Error Handling**: Xử lý lỗi AI service gracefully
+
+## 🗄️ Database Schema
+
+### Core Models
+
+1. **AIInteraction** - Lưu trữ tương tác AI, request/response
+2. **Vocabulary** - Kho từ vựng chung (từ điển toàn cầu)
+3. **PersonalVocabulary** - Từ vựng cá nhân của người dùng
+4. **UserProgress** - Tiến độ học tập, XP, achievements
+5. **Exercise** - Bài tập được tạo bởi AI
+6. **Session** - Quản lý phiên làm việc
+7. **User** - Thông tin người dùng
+8. **FrontendActivity** - Tracking hoạt động frontend
+
+### Key Features
+
+- **Spaced Repetition Algorithm**: Thuật toán ôn tập thông minh
+- **XP & Level System**: Hệ thống kinh nghiệm và cấp độ
+- **Achievement System**: Hệ thống thành tích tự động
+- **Progress Analytics**: Thống kê học tập chi tiết
+
+## 🔒 Bảo Mật & Performance
+
+### Security Features
+
+- **Helmet**: Bảo mật HTTP headers
+- **CORS**: Cross-origin resource sharing
+- **Rate Limiting**: Giới hạn request rate
+- **Input Validation**: Kiểm tra dữ liệu đầu vào
+- **Session Management**: Quản lý phiên an toàn
+
+### Performance Optimization
+
+- **Connection Pooling**: MongoDB connection pooling
+- **Indexing**: Tối ưu indexes cho truy vấn
+- **Async Processing**: Xử lý bất đồng bộ
+- **Buffer Management**: Xử lý dữ liệu lớn hiệu quả
+- **Caching Strategy**: Cache dữ liệu thường xuyên truy cập
+
+## 📊 Monitoring & Logging
+
+### Logging System
+
+- **Morgan**: HTTP request logging
+- **Winston**: Application logging
+- **Error Tracking**: Chi tiết lỗi và stack trace
+- **Performance Metrics**: Response time, throughput
+
+### Health Monitoring
+
+- `GET /health` - Health check endpoint
+- **Database Connection**: MongoDB connection status
+- **AI Service Status**: Gemini API availability
+- **System Resources**: Memory, CPU usage
+
+## 🚀 Deployment
+
+### Docker Deployment
+
+```bash
+# Build image
+docker build -t chinese-ai-backend .
+
+# Run container
+docker run -p 3001:3001 \
+  -e MONGODB_URI=mongodb://host.docker.internal:27017/chinese_ai_db \
+  -e GEMINI_API_KEY=your_key \
+  chinese-ai-backend
+```
+
+### Production Considerations
+
+- **Environment Variables**: Sử dụng .env cho production
+- **Process Management**: PM2 hoặc Docker
+- **Load Balancing**: Nginx reverse proxy
+- **Monitoring**: Application performance monitoring
+- **Backup Strategy**: MongoDB backup và recovery
+
+## 🧪 Testing & Development
+
+### Development Scripts
+
+```bash
+npm run dev          # Development mode với nodemon
+npm run seed         # Seed dữ liệu mẫu
+npm start            # Production mode
+```
+
+### Testing Strategy
+
+- **Unit Tests**: Kiểm tra logic nghiệp vụ
+- **Integration Tests**: Kiểm tra API endpoints
+- **Performance Tests**: Load testing và stress testing
+- **AI Service Tests**: Mock Gemini API responses
+
+## 📈 Scalability & Future Features
+
+### Planned Enhancements
+
+- **Real-time Updates**: WebSocket cho live progress
+- **Advanced Analytics**: Machine learning insights
+- **Multi-language Support**: Hỗ trợ nhiều ngôn ngữ
+- **Mobile API**: Tối ưu cho mobile apps
+- **Offline Support**: Service worker và caching
+
+### Architecture Evolution
+
+- **Microservices**: Tách thành các service riêng biệt
+- **Message Queue**: Redis/RabbitMQ cho async processing
+- **API Gateway**: Centralized API management
+- **Container Orchestration**: Kubernetes deployment
+
+## 🤝 Contributing
+
+### Development Guidelines
+
+1. **Code Style**: ESLint + Prettier
+2. **Git Flow**: Feature branches + PR reviews
+3. **Documentation**: JSDoc cho functions
+4. **Testing**: Unit tests cho business logic
+5. **Error Handling**: Consistent error responses
+
+### API Standards
+
+- **Response Format**: `{ success, data, message }`
+- **HTTP Status Codes**: Proper status code usage
+- **Error Messages**: Vietnamese language support
+- **Pagination**: Consistent pagination structure
+
+## 📞 Support & Contact
+
+### Documentation
+
+- **API Docs**: Chi tiết endpoints và parameters
+- **Database Schema**: Model definitions và relationships
+- **Deployment Guide**: Step-by-step deployment
+- **Troubleshooting**: Common issues và solutions
+
+### Team Contact
+
+- **Development Team**: Backend development team
+- **Technical Support**: Technical issues và questions
+- **Feature Requests**: New feature suggestions
+- **Bug Reports**: Issue reporting và tracking
+
+---
+
+**Version**: 1.0.0  
+**Last Updated**: 2025  
+**License**: MIT  
+**Maintainer**: Chinese AI Learning Team

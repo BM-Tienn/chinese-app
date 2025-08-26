@@ -1,6 +1,7 @@
 const axios = require('axios');
 const AIInteraction = require('../models/AIInteraction');
 const config = require('../config/config');
+const AutoTaskService = require('./autoTaskService');
 
 // Tạo instance axios cho Gemini API
 const geminiClient = axios.create({
@@ -85,7 +86,8 @@ const createEnhancedError = (message, originalError) => {
 
 // Hàm helper để validate Gemini API response
 const validateGeminiResponse = (response, context = '') => {
-    if (!response?.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    // Kiểm tra cấu trúc response mới của Gemini API
+    if (!response?.data?.candidates?.[0]?.content) {
         console.error(`Invalid Gemini API response structure for ${context}:`, response.data);
         console.error('Response data keys:', Object.keys(response.data || {}));
         if (response.data?.candidates?.[0]) {
@@ -93,7 +95,28 @@ const validateGeminiResponse = (response, context = '') => {
         }
         throw new Error(`Phản hồi từ AI service không hợp lệ hoặc rỗng ${context ? `khi ${context}` : ''}. Vui lòng thử lại.`);
     }
-    return response.data.candidates[0].content.parts[0].text;
+
+    const candidate = response.data.candidates[0];
+    let responseText = '';
+
+    // Kiểm tra cấu trúc cũ (có parts)
+    if (candidate.content.parts && candidate.content.parts[0]?.text) {
+        responseText = candidate.content.parts[0].text;
+    }
+    // Kiểm tra cấu trúc mới (content trực tiếp)
+    else if (candidate.content.text) {
+        responseText = candidate.content.text;
+    }
+    // Kiểm tra cấu trúc khác có thể có
+    else if (typeof candidate.content === 'string') {
+        responseText = candidate.content;
+    }
+    else {
+        console.error(`No valid text content found in Gemini response for ${context}:`, candidate.content);
+        throw new Error(`Không tìm thấy nội dung văn bản hợp lệ trong phản hồi từ AI service ${context ? `khi ${context}` : ''}. Vui lòng thử lại.`);
+    }
+
+    return responseText;
 };
 
 // Hàm helper để parse response text
@@ -222,9 +245,18 @@ const callGeminiAPI = async (payload, context = '') => {
 
     const responseTime = Date.now() - startTime;
 
-    // Chỉ log khi cần thiết (development mode)
-    if (config.nodeEnv === 'development') {
-        logResponseInfo(response, responseTime, context);
+    // Log response structure để debug
+    logResponseInfo(response, responseTime, context);
+
+    // Log chi tiết cấu trúc content để debug
+    if (response.data?.candidates?.[0]?.content) {
+        console.log(`Content structure for ${context}:`, {
+            hasParts: !!response.data.candidates[0].content.parts,
+            hasText: !!response.data.candidates[0].content.text,
+            isString: typeof response.data.candidates[0].content === 'string',
+            contentKeys: Object.keys(response.data.candidates[0].content),
+            contentType: typeof response.data.candidates[0].content
+        });
     }
 
     const responseText = validateGeminiResponse(response, context);
@@ -414,8 +446,26 @@ const analyzeImage = async (payload, sessionId, userId = null, metadata = {}) =>
                     tags: ['image-analysis', 'chinese-learning'],
                     notes: metadata.notes || 'Phân tích hình ảnh tiếng Trung'
                 });
+
+                // Chạy task tự động để xử lý dữ liệu
+                const autoTaskResult = await AutoTaskService.processImageAnalysisResult(
+                    normalizedResult,
+                    {
+                        userId,
+                        sessionId,
+                        aiModel: 'gemini-2.5-flash-preview-05-20',
+                        userAgent: metadata.userAgent,
+                        ipAddress: metadata.ipAddress,
+                        tags: ['AI Generated', 'Image Analysis'],
+                        category: 'Common',
+                        difficulty: 'Medium',
+                        notes: metadata.notes || 'Phân tích hình ảnh tiếng Trung'
+                    }
+                );
+
+                console.log('Kết quả task tự động:', autoTaskResult);
             } catch (saveError) {
-                console.error('Lỗi khi lưu lịch sử (không ảnh hưởng response):', saveError);
+                console.error('Lỗi khi lưu lịch sử hoặc chạy task tự động:', saveError);
             }
         });
 
@@ -468,8 +518,29 @@ const generateExercises = async (payload, sessionId, userId = null, metadata = {
                     tags: ['exercise-generation', 'chinese-learning'],
                     notes: metadata.notes || 'Tạo bài tập tiếng Trung'
                 });
+
+                // Chạy task tự động để xử lý bài tập được tạo
+                if (result.exercises || result.questions) {
+                    const exerciseData = result.exercises || result.questions;
+                    const autoTaskResult = await AutoTaskService.processGeneratedExercises(
+                        exerciseData,
+                        {
+                            userId,
+                            sessionId,
+                            aiModel: 'gemini-2.5-flash-preview-05-20',
+                            userAgent: metadata.userAgent,
+                            ipAddress: metadata.ipAddress,
+                            tags: ['AI Generated', 'Exercise Generation'],
+                            category: 'Mixed',
+                            difficulty: 'Medium',
+                            notes: metadata.notes || 'Tạo bài tập tiếng Trung'
+                        }
+                    );
+
+                    console.log('Kết quả xử lý bài tập tự động:', autoTaskResult);
+                }
             } catch (saveError) {
-                console.error('Lỗi khi lưu lịch sử (không ảnh hưởng response):', saveError);
+                console.error('Lỗi khi lưu lịch sử hoặc chạy task tự động:', saveError);
             }
         });
 
@@ -526,8 +597,26 @@ const analyzeWordDetails = async (payload, sessionId, userId = null, metadata = 
                     tags: ['word-analysis', 'chinese-learning'],
                     notes: metadata.notes || 'Phân tích chi tiết từ vựng tiếng Trung'
                 });
+
+                // Chạy task tự động để xử lý thông tin chi tiết từ vựng
+                const autoTaskResult = await AutoTaskService.processWordDetailsResult(
+                    result,
+                    {
+                        userId,
+                        sessionId,
+                        aiModel: 'gemini-2.5-flash-preview-05-20',
+                        userAgent: metadata.userAgent,
+                        ipAddress: metadata.ipAddress,
+                        tags: ['AI Generated', 'Word Details Analysis'],
+                        category: 'Vocabulary',
+                        difficulty: 'Medium',
+                        notes: metadata.notes || 'Phân tích chi tiết từ vựng tiếng Trung'
+                    }
+                );
+
+                console.log('Kết quả xử lý từ vựng chi tiết tự động:', autoTaskResult);
             } catch (saveError) {
-                console.error('Lỗi khi lưu lịch sử (không ảnh hưởng response):', saveError);
+                console.error('Lỗi khi lưu lịch sử hoặc chạy task tự động:', saveError);
             }
         });
 
@@ -618,7 +707,19 @@ const getAIInteractionHistory = async (filters = {}, limit = 50, skip = 0) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .lean();
+            .lean()
+            .exec(); // Thêm .exec() để đảm bảo promise được resolve đúng cách
+
+        // Debug logging để kiểm tra dữ liệu
+        console.log('AI Service - Found interactions:', interactions.length);
+        if (interactions.length > 0) {
+            console.log('First interaction:', {
+                _id: interactions[0]._id,
+                hasId: !!interactions[0]._id,
+                sessionId: interactions[0].sessionId,
+                endpoint: interactions[0].endpoint
+            });
+        }
 
         const total = await AIInteraction.countDocuments(query);
 
